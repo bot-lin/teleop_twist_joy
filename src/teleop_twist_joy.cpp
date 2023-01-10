@@ -60,6 +60,8 @@ struct TeleopTwistJoy::Impl
   int64_t enable_button;
   int64_t enable_turbo_button;
 
+  std::string cmd_vel_topic;
+
   std::map<std::string, int64_t> axis_linear_map;
   std::map<std::string, std::map<std::string, double>> scale_linear_map;
 
@@ -75,8 +77,8 @@ struct TeleopTwistJoy::Impl
 TeleopTwistJoy::TeleopTwistJoy(const rclcpp::NodeOptions& options) : Node("teleop_twist_joy_node", options)
 {
   pimpl_ = new Impl;
-
-  pimpl_->cmd_vel_pub = this->create_publisher<geometry_msgs::msg::Twist>("cmd_vel", 10);
+  pimpl_->cmd_vel_topic = this->declare_parameter("cmd_vel_topic", "cmd_vel_nav");
+  pimpl_->cmd_vel_pub = this->create_publisher<geometry_msgs::msg::Twist>(pimpl_->cmd_vel_topic, 10);
   pimpl_->joy_sub = this->create_subscription<sensor_msgs::msg::Joy>("joy", rclcpp::QoS(10),
     std::bind(&TeleopTwistJoy::Impl::joyCallback, this->pimpl_, std::placeholders::_1));
 
@@ -182,7 +184,7 @@ TeleopTwistJoy::TeleopTwistJoy(const rclcpp::NodeOptions& options) : Node("teleo
         {
           result.reason = "Only integer values can be set for '" + parameter.get_name() + "'.";
           RCLCPP_WARN(this->get_logger(), result.reason.c_str());
-          result.successful = false;
+          result.successful = false; 
           return result;
         }
       }
