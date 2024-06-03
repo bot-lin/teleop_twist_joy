@@ -109,6 +109,7 @@ TeleopTwistJoy::TeleopTwistJoy(const rclcpp::NodeOptions& options) : Node("teleo
 
   std::map<std::string, int64_t> default_linear_map{
     {"x", 5L},
+    {"x2", 1L}
     {"y", -1L},
     {"z", -1L},
   };
@@ -117,6 +118,7 @@ TeleopTwistJoy::TeleopTwistJoy(const rclcpp::NodeOptions& options) : Node("teleo
 
   std::map<std::string, int64_t> default_angular_map{
     {"yaw", 2L},
+    {"yaw2", 4L},
     {"pitch", -1L},
     {"roll", -1L},
   };
@@ -125,6 +127,7 @@ TeleopTwistJoy::TeleopTwistJoy(const rclcpp::NodeOptions& options) : Node("teleo
 
   std::map<std::string, double> default_scale_linear_normal_map{
     {"x", 0.5},
+    {"x2", 0.5},
     {"y", 0.0},
     {"z", 0.0},
   };
@@ -133,6 +136,7 @@ TeleopTwistJoy::TeleopTwistJoy(const rclcpp::NodeOptions& options) : Node("teleo
 
   std::map<std::string, double> default_scale_linear_turbo_map{
     {"x", 1.0},
+    {"x2", 1.0},
     {"y", 0.0},
     {"z", 0.0},
   };
@@ -141,6 +145,7 @@ TeleopTwistJoy::TeleopTwistJoy(const rclcpp::NodeOptions& options) : Node("teleo
 
   std::map<std::string, double> default_scale_angular_normal_map{
     {"yaw", 0.5},
+    {"yaw2", 0.5},
     {"pitch", 0.0},
     {"roll", 0.0},
   };
@@ -149,6 +154,7 @@ TeleopTwistJoy::TeleopTwistJoy(const rclcpp::NodeOptions& options) : Node("teleo
 
   std::map<std::string, double> default_scale_angular_turbo_map{
     {"yaw", 1.0},
+    {"yaw2", 1.0},
     {"pitch", 0.0},
     {"roll", 0.0},
   };
@@ -400,6 +406,11 @@ void TeleopTwistJoy::Impl::sendCmdVelMsg(const sensor_msgs::msg::Joy::SharedPtr 
     {
       scale_linear_map[which_map].at("x") = max_linear_speed;
     }
+    scale_linear_map[which_map].at("x2") = scale_linear_map[which_map].at("x2") + 0.05;
+    if (scale_linear_map[which_map].at("x2") > max_linear_speed)
+    {
+      scale_linear_map[which_map].at("x2") = max_linear_speed;
+    }
     scale_linear_map[which_map].at("y") = scale_linear_map[which_map].at("y") + 0.05;
     if (scale_linear_map[which_map].at("y") > max_linear_speed)
     {
@@ -419,6 +430,11 @@ void TeleopTwistJoy::Impl::sendCmdVelMsg(const sensor_msgs::msg::Joy::SharedPtr 
     if (scale_linear_map[which_map].at("x") < min_linear_speed)
     {
       scale_linear_map[which_map].at("x") = min_linear_speed;
+    }
+    scale_linear_map[which_map].at("x2") = scale_linear_map[which_map].at("x2") - 0.05;
+    if (scale_linear_map[which_map].at("x2") < min_linear_speed)
+    {
+      scale_linear_map[which_map].at("x2") = min_linear_speed;
     }
     scale_linear_map[which_map].at("y") = scale_linear_map[which_map].at("y") - 0.05;
     if (scale_linear_map[which_map].at("y") < min_linear_speed)
@@ -440,6 +456,11 @@ void TeleopTwistJoy::Impl::sendCmdVelMsg(const sensor_msgs::msg::Joy::SharedPtr 
     {
       scale_angular_map[which_map].at("yaw") = max_angular_speed;
     }
+    scale_angular_map[which_map].at("yaw2") = scale_angular_map[which_map].at("yaw2") + 0.05;
+    if (scale_angular_map[which_map].at("yaw2") > max_angular_speed)
+    {
+      scale_angular_map[which_map].at("yaw2") = max_angular_speed;
+    }
     scale_angular_map[which_map].at("pitch") = scale_angular_map[which_map].at("pitch") + 0.05;
     if (scale_angular_map[which_map].at("pitch") > max_angular_speed)
     {
@@ -460,6 +481,11 @@ void TeleopTwistJoy::Impl::sendCmdVelMsg(const sensor_msgs::msg::Joy::SharedPtr 
     {
       scale_angular_map[which_map].at("yaw") = min_angular_speed;
     }
+    scale_angular_map[which_map].at("yaw2") = scale_angular_map[which_map].at("yaw2") - 0.05;
+    if (scale_angular_map[which_map].at("yaw2") < min_angular_speed)
+    {
+      scale_angular_map[which_map].at("yaw2") = min_angular_speed;
+    }
     scale_angular_map[which_map].at("pitch") = scale_angular_map[which_map].at("pitch") - 0.05;
     if (scale_angular_map[which_map].at("pitch") < min_angular_speed)
     {
@@ -476,9 +502,11 @@ void TeleopTwistJoy::Impl::sendCmdVelMsg(const sensor_msgs::msg::Joy::SharedPtr 
   
 
   cmd_vel_msg->linear.x = getVal(joy_msg, axis_linear_map, scale_linear_map[which_map], "x");
+  cmd_vel_msg->linear.x = getVal(joy_msg, axis_linear_map, scale_linear_map[which_map], "x2");
   cmd_vel_msg->linear.y = getVal(joy_msg, axis_linear_map, scale_linear_map[which_map], "y");
   cmd_vel_msg->linear.z = getVal(joy_msg, axis_linear_map, scale_linear_map[which_map], "z");
   cmd_vel_msg->angular.z = getVal(joy_msg, axis_angular_map, scale_angular_map[which_map], "yaw");
+  cmd_vel_msg->angular.z = getVal(joy_msg, axis_angular_map, scale_angular_map[which_map], "yaw2");
   cmd_vel_msg->angular.y = getVal(joy_msg, axis_angular_map, scale_angular_map[which_map], "pitch");
   cmd_vel_msg->angular.x = getVal(joy_msg, axis_angular_map, scale_angular_map[which_map], "roll");
 
@@ -487,7 +515,18 @@ void TeleopTwistJoy::Impl::sendCmdVelMsg(const sensor_msgs::msg::Joy::SharedPtr 
 }
 
 void TeleopTwistJoy::Impl::joyCallback(const sensor_msgs::msg::Joy::SharedPtr joy_msg)
-{
+{ 
+  if (joy_msg->buttons[0] == 1){
+
+  }
+  //if all axes == 0, return
+  float sum = 0.0f;
+    for (float num : joy_msg->axes) {
+        sum += num;
+    }
+    if (sum == 0.0) return;
+
+  
   if (enable_turbo_button >= 0 &&
       static_cast<int>(joy_msg->buttons.size()) > enable_turbo_button &&
       joy_msg->buttons[enable_turbo_button])
