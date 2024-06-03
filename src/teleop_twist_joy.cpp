@@ -109,7 +109,7 @@ TeleopTwistJoy::TeleopTwistJoy(const rclcpp::NodeOptions& options) : Node("teleo
 
   std::map<std::string, int64_t> default_linear_map{
     {"x", 5L},
-    {"x2", 1L}
+    {"x2", 1L},
     {"y", -1L},
     {"z", -1L},
   };
