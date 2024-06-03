@@ -60,6 +60,9 @@ struct TeleopTwistJoy::Impl
   int64_t enable_button;
   int64_t enable_turbo_button;
   int64_t linear_increase_button;
+  int64_t linear_decrease_button;
+  int64_t angular_increase_button;
+  int64_t angular_decrease_button;
   
 
   std::string cmd_vel_topic;
@@ -89,6 +92,15 @@ TeleopTwistJoy::TeleopTwistJoy(const rclcpp::NodeOptions& options) : Node("teleo
   pimpl_->enable_button = this->declare_parameter("enable_button", 5);
 
   pimpl_->enable_turbo_button = this->declare_parameter("enable_turbo_button", -1);
+  pimpl_->linear_increase_button = this->declare_parameter("linear_increase_button", -1);
+  pimpl_->linear_decrease_button = this->declare_parameter("linear_decrease_button", -1);
+  pimpl_->angular_increase_button = this->declare_parameter("angular_increase_button", -1);
+  pimpl_->angular_decrease_button = this->declare_parameter("angular_decrease_button", -1);
+  pimpl_->max_linear_speed = this->declare_parameter("max_linear_speed", 0.5);
+  pimpl_->max_linear_speed = this->declare_parameter("min_linear_speed", 0.05);
+  pimpl_->max_angular_speed = this->declare_parameter("max_angular_speed", 0.5);
+  pimpl_->max_angular_speed = this->declare_parameter("min_angular_speed", 0.05);
+
 
   std::map<std::string, int64_t> default_linear_map{
     {"x", 5L},
@@ -143,6 +155,15 @@ TeleopTwistJoy::TeleopTwistJoy(const rclcpp::NodeOptions& options) : Node("teleo
   ROS_INFO_COND_NAMED(pimpl_->enable_turbo_button >= 0, "TeleopTwistJoy",
     "Turbo on button %" PRId64 ".", pimpl_->enable_turbo_button);
 
+  ROS_INFO_COND_NAMED(pimpl_->linear_increase_button >= 0, "TeleopTwistJoy",
+    "Linear increase on button %" PRId64 ".", pimpl_->linear_increase_button);
+  ROS_INFO_COND_NAMED(pimpl_->linear_decrease_button >= 0, "TeleopTwistJoy",
+    "Linear decrease on button %" PRId64 ".", pimpl_->linear_decrease_button);
+  ROS_INFO_COND_NAMED(pimpl_->angular_increase_button >= 0, "TeleopTwistJoy",
+    "Angular increase on button %" PRId64 ".", pimpl_->angular_increase_button);
+  ROS_INFO_COND_NAMED(pimpl_->angular_decrease_button >= 0, "TeleopTwistJoy",
+    "Angular decrease on button %" PRId64 ".", pimpl_->angular_decrease_button);
+
   for (std::map<std::string, int64_t>::iterator it = pimpl_->axis_linear_map.begin();
        it != pimpl_->axis_linear_map.end(); ++it)
   {
@@ -168,11 +189,13 @@ TeleopTwistJoy::TeleopTwistJoy(const rclcpp::NodeOptions& options) : Node("teleo
   {
     static std::set<std::string> intparams = {"axis_linear.x", "axis_linear.y", "axis_linear.z",
                                               "axis_angular.yaw", "axis_angular.pitch", "axis_angular.roll",
-                                              "enable_button", "enable_turbo_button"};
+                                              "enable_button", "enable_turbo_button", "linear_increase_button",
+                                              "linear_decrease_button", "angular_increase_button", "angular_decrease_button"};
     static std::set<std::string> doubleparams = {"scale_linear.x", "scale_linear.y", "scale_linear.z",
                                                  "scale_linear_turbo.x", "scale_linear_turbo.y", "scale_linear_turbo.z",
                                                  "scale_angular.yaw", "scale_angular.pitch", "scale_angular.roll",
-                                                 "scale_angular_turbo.yaw", "scale_angular_turbo.pitch", "scale_angular_turbo.roll"};
+                                                 "scale_angular_turbo.yaw", "scale_angular_turbo.pitch", "scale_angular_turbo.roll",
+                                                 "max_linear_speed", "min_linear_speed", "max_angular_speed", "min_angular_speed"};
     static std::set<std::string> boolparams = {"require_enable_button"};
     auto result = rcl_interfaces::msg::SetParametersResult();
     result.successful = true;
@@ -227,6 +250,22 @@ TeleopTwistJoy::TeleopTwistJoy(const rclcpp::NodeOptions& options) : Node("teleo
       {
         this->pimpl_->enable_turbo_button = parameter.get_value<rclcpp::PARAMETER_INTEGER>();
       }
+      else if (parameter.get_name() == "linear_increase_button")
+      {
+        this->pimpl_->linear_increase_button = parameter.get_value<rclcpp::PARAMETER_INTEGER>();
+      }
+      else if (parameter.get_name() == "linear_decrease_button")
+      {
+        this->pimpl_->linear_decrease_button = parameter.get_value<rclcpp::PARAMETER_INTEGER>();
+      }
+      else if (parameter.get_name() == "angular_increase_button")
+      {
+        this->pimpl_->angular_increase_button = parameter.get_value<rclcpp::PARAMETER_INTEGER>();
+      }
+      else if (parameter.get_name() == "angular_decrease_button")
+      {
+        this->pimpl_->angular_decrease_button = parameter.get_value<rclcpp::PARAMETER_INTEGER>();
+      }
       else if (parameter.get_name() == "axis_linear.x")
       {
         this->pimpl_->axis_linear_map["x"] = parameter.get_value<rclcpp::PARAMETER_INTEGER>();
@@ -250,6 +289,22 @@ TeleopTwistJoy::TeleopTwistJoy(const rclcpp::NodeOptions& options) : Node("teleo
       else if (parameter.get_name() == "axis_angular.roll")
       {
         this->pimpl_->axis_angular_map["roll"] = parameter.get_value<rclcpp::PARAMETER_INTEGER>();
+      }
+      else if (parameter.get_name() == "max_linear_speed")
+      {
+        this->pimpl_->max_linear_speed = parameter.get_value<rclcpp::PARAMETER_DOUBLE>();
+      }
+      else if (parameter.get_name() == "min_linear_speed")
+      {
+        this->pimpl_->min_linear_speed = parameter.get_value<rclcpp::PARAMETER_DOUBLE>();
+      }
+      else if (parameter.get_name() == "max_angular_speed")
+      {
+        this->pimpl_->max_angular_speed = parameter.get_value<rclcpp::PARAMETER_DOUBLE>();
+      }
+      else if (parameter.get_name() == "min_angular_speed")
+      {
+        this->pimpl_->min_angular_speed = parameter.get_value<rclcpp::PARAMETER_DOUBLE>();
       }
       else if (parameter.get_name() == "scale_linear_turbo.x")
       {
@@ -321,6 +376,52 @@ double getVal(const sensor_msgs::msg::Joy::SharedPtr joy_msg, const std::map<std
   {
     return 0.0;
   }
+
+  if (joy_msg->buttons[linear_increase_button])
+  {
+    if (filedname == "x" || filedname == "y" || filedname == "z")
+    {
+      scale_map.at(fieldname) = scale_map.at(fieldname) + 0.1;
+      if (scale_map.at(fieldname) > max_linear_speed)
+      {
+        scale_map.at(fieldname) = max_linear_speed;
+      }
+    }
+  }
+  if (joy_msg->buttons[linear_decrease_button])
+  {
+    if (filedname == "x" || filedname == "y" || filedname == "z")
+    {
+      scale_map.at(fieldname) = scale_map.at(fieldname) - 0.1;
+      if (scale_map.at(fieldname) < min_linear_speed)
+      {
+        scale_map.at(fieldname) = min_linear_speed;
+      }
+    }
+  }
+  if (joy_msg->buttons[angular_increase_button])
+  {
+    if (filedname == "yaw" || filedname == "pitch" || filedname == "roll")
+    {
+      scale_map.at(fieldname) = scale_map.at(fieldname) + 0.1;
+      if (scale_map.at(fieldname) > max_angular_speed)
+      {
+        scale_map.at(fieldname) = max_angular_speed;
+      }
+    }
+  }
+  if (joy_msg->buttons[angular_decrease_button])
+  {
+    if (filedname == "yaw" || filedname == "pitch" || filedname == "roll")
+    {
+      scale_map.at(fieldname) = scale_map.at(fieldname) - 0.1;
+      if (scale_map.at(fieldname) < min_angular_speed)
+      {
+        scale_map.at(fieldname) = min_angular_speed;
+      }
+    }
+  }
+
 
   return joy_msg->axes[axis_map.at(fieldname)] * scale_map.at(fieldname);
 }
