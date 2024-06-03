@@ -411,6 +411,7 @@ void TeleopTwistJoy::Impl::sendCmdVelMsg(const sensor_msgs::msg::Joy::SharedPtr 
   }
   if (joy_msg->buttons[linear_decrease_button])
   {
+    ROS_INFO_NAMED("TeleopTwistJoy", "Decrease linear speed");
     scale_linear_map[which_map].at("x") = scale_linear_map[which_map].at("x") - 0.1;
     if (scale_linear_map[which_map].at("x") < min_linear_speed)
     {
