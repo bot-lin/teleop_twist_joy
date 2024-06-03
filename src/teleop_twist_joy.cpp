@@ -385,7 +385,7 @@ double getVal(const sensor_msgs::msg::Joy::SharedPtr joy_msg, const std::map<std
     return 0.0;
   }
 
-  ROS_INFO_NAMED("TeleopTwistJoy", "Axis %s: %f, scale: %f", fieldname.c_str(), joy_msg->axes[axis_map.at(fieldname)], scale_map.at(fieldname);
+  ROS_INFO_NAMED("TeleopTwistJoy", "Axis %s: %f, scale: %f", fieldname.c_str(), joy_msg->axes[axis_map.at(fieldname)], scale_map.at(fieldname));
   return joy_msg->axes[axis_map.at(fieldname)] * scale_map.at(fieldname);
 }
 
