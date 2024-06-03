@@ -500,16 +500,17 @@ void TeleopTwistJoy::Impl::sendCmdVelMsg(const sensor_msgs::msg::Joy::SharedPtr 
     ROS_INFO_NAMED("TeleopTwistJoy", "Angular yaw: %f, pitch: %f, roll: %f", scale_angular_map[which_map].at("yaw"), scale_angular_map[which_map].at("pitch"), scale_angular_map[which_map].at("roll"));
   }
   
-
-  cmd_vel_msg->linear.x = getVal(joy_msg, axis_linear_map, scale_linear_map[which_map], "x");
-  cmd_vel_msg->linear.x = getVal(joy_msg, axis_linear_map, scale_linear_map[which_map], "x2");
+  double v = getVal(joy_msg, axis_linear_map, scale_linear_map[which_map], "x");
+  if (v != 0.0) cmd_vel_msg->linear.x = v;
+  else cmd_vel_msg->linear.x = getVal(joy_msg, axis_linear_map, scale_linear_map[which_map], "x2");
   cmd_vel_msg->linear.y = getVal(joy_msg, axis_linear_map, scale_linear_map[which_map], "y");
   cmd_vel_msg->linear.z = getVal(joy_msg, axis_linear_map, scale_linear_map[which_map], "z");
-  cmd_vel_msg->angular.z = getVal(joy_msg, axis_angular_map, scale_angular_map[which_map], "yaw");
-  cmd_vel_msg->angular.z = getVal(joy_msg, axis_angular_map, scale_angular_map[which_map], "yaw2");
+  double yaw = getVal(joy_msg, axis_angular_map, scale_angular_map[which_map], "yaw");
+  if (yaw != 0) cmd_vel_msg->angular.z = yaw;
+  else cmd_vel_msg->angular.z = getVal(joy_msg, axis_angular_map, scale_angular_map[which_map], "yaw2");
   cmd_vel_msg->angular.y = getVal(joy_msg, axis_angular_map, scale_angular_map[which_map], "pitch");
   cmd_vel_msg->angular.x = getVal(joy_msg, axis_angular_map, scale_angular_map[which_map], "roll");
-
+  
   cmd_vel_pub->publish(std::move(cmd_vel_msg));
   sent_disable_msg = false;
 }
