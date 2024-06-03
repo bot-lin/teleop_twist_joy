@@ -101,9 +101,9 @@ TeleopTwistJoy::TeleopTwistJoy(const rclcpp::NodeOptions& options) : Node("teleo
   pimpl_->angular_increase_button = this->declare_parameter("angular_increase_button", -1);
   pimpl_->angular_decrease_button = this->declare_parameter("angular_decrease_button", -1);
   pimpl_->max_linear_speed = this->declare_parameter("max_linear_speed", 0.5);
-  pimpl_->max_linear_speed = this->declare_parameter("min_linear_speed", 0.05);
+  pimpl_->min_linear_speed = this->declare_parameter("min_linear_speed", 0.05);
   pimpl_->max_angular_speed = this->declare_parameter("max_angular_speed", 0.5);
-  pimpl_->max_angular_speed = this->declare_parameter("min_angular_speed", 0.05);
+  pimpl_->min_angular_speed = this->declare_parameter("min_angular_speed", 0.05);
 
 
 
@@ -396,17 +396,17 @@ void TeleopTwistJoy::Impl::sendCmdVelMsg(const sensor_msgs::msg::Joy::SharedPtr 
   auto cmd_vel_msg = std::make_unique<geometry_msgs::msg::Twist>();
   if (joy_msg->buttons[linear_increase_button])
   {
-    scale_linear_map[which_map].at("x") = scale_linear_map[which_map].at("x") + 0.1;
+    scale_linear_map[which_map].at("x") = scale_linear_map[which_map].at("x") + 0.05;
     if (scale_linear_map[which_map].at("x") > max_linear_speed)
     {
       scale_linear_map[which_map].at("x") = max_linear_speed;
     }
-    scale_linear_map[which_map].at("y") = scale_linear_map[which_map].at("y") + 0.1;
+    scale_linear_map[which_map].at("y") = scale_linear_map[which_map].at("y") + 0.05;
     if (scale_linear_map[which_map].at("y") > max_linear_speed)
     {
       scale_linear_map[which_map].at("y") = max_linear_speed;
     }
-    scale_linear_map[which_map].at("z") = scale_linear_map[which_map].at("z") + 0.1;
+    scale_linear_map[which_map].at("z") = scale_linear_map[which_map].at("z") + 0.05;
     if (scale_linear_map[which_map].at("z") > max_linear_speed)
     {
       scale_linear_map[which_map].at("z") = max_linear_speed;
@@ -414,18 +414,17 @@ void TeleopTwistJoy::Impl::sendCmdVelMsg(const sensor_msgs::msg::Joy::SharedPtr 
   }
   if (joy_msg->buttons[linear_decrease_button])
   {
-    ROS_INFO_NAMED("TeleopTwistJoy", "Decrease linear speed");
-    scale_linear_map[which_map].at("x") = scale_linear_map[which_map].at("x") - 0.1;
+    scale_linear_map[which_map].at("x") = scale_linear_map[which_map].at("x") - 0.05;
     if (scale_linear_map[which_map].at("x") < min_linear_speed)
     {
       scale_linear_map[which_map].at("x") = min_linear_speed;
     }
-    scale_linear_map[which_map].at("y") = scale_linear_map[which_map].at("y") - 0.1;
+    scale_linear_map[which_map].at("y") = scale_linear_map[which_map].at("y") - 0.05;
     if (scale_linear_map[which_map].at("y") < min_linear_speed)
     {
       scale_linear_map[which_map].at("y") = min_linear_speed;
     }
-    scale_linear_map[which_map].at("z") = scale_linear_map[which_map].at("z") - 0.1;
+    scale_linear_map[which_map].at("z") = scale_linear_map[which_map].at("z") - 0.05;
     if (scale_linear_map[which_map].at("z") < min_linear_speed)
     {
       scale_linear_map[which_map].at("z") = min_linear_speed;
@@ -433,17 +432,17 @@ void TeleopTwistJoy::Impl::sendCmdVelMsg(const sensor_msgs::msg::Joy::SharedPtr 
   }
   if (joy_msg->buttons[angular_increase_button])
   {
-    scale_angular_map[which_map].at("yaw") = scale_angular_map[which_map].at("yaw") + 0.1;
+    scale_angular_map[which_map].at("yaw") = scale_angular_map[which_map].at("yaw") + 0.05;
     if (scale_angular_map[which_map].at("yaw") > max_angular_speed)
     {
       scale_angular_map[which_map].at("yaw") = max_angular_speed;
     }
-    scale_angular_map[which_map].at("pitch") = scale_angular_map[which_map].at("pitch") + 0.1;
+    scale_angular_map[which_map].at("pitch") = scale_angular_map[which_map].at("pitch") + 0.05;
     if (scale_angular_map[which_map].at("pitch") > max_angular_speed)
     {
       scale_angular_map[which_map].at("pitch") = max_angular_speed;
     }
-    scale_angular_map[which_map].at("roll") = scale_angular_map[which_map].at("roll") + 0.1;
+    scale_angular_map[which_map].at("roll") = scale_angular_map[which_map].at("roll") + 0.05;
     if (scale_angular_map[which_map].at("roll") > max_angular_speed)
     {
       scale_angular_map[which_map].at("roll") = max_angular_speed;
@@ -451,17 +450,17 @@ void TeleopTwistJoy::Impl::sendCmdVelMsg(const sensor_msgs::msg::Joy::SharedPtr 
   }
   if (joy_msg->buttons[angular_decrease_button])
   {
-    scale_angular_map[which_map].at("yaw") = scale_angular_map[which_map].at("yaw") - 0.1;
+    scale_angular_map[which_map].at("yaw") = scale_angular_map[which_map].at("yaw") - 0.05;
     if (scale_angular_map[which_map].at("yaw") < min_angular_speed)
     {
       scale_angular_map[which_map].at("yaw") = min_angular_speed;
     }
-    scale_angular_map[which_map].at("pitch") = scale_angular_map[which_map].at("pitch") - 0.1;
+    scale_angular_map[which_map].at("pitch") = scale_angular_map[which_map].at("pitch") - 0.05;
     if (scale_angular_map[which_map].at("pitch") < min_angular_speed)
     {
       scale_angular_map[which_map].at("pitch") = min_angular_speed;
     }
-    scale_angular_map[which_map].at("roll") = scale_angular_map[which_map].at("roll") - 0.1;
+    scale_angular_map[which_map].at("roll") = scale_angular_map[which_map].at("roll") - 0.05;
     if (scale_angular_map[which_map].at("roll") < min_angular_speed)
     {
       scale_angular_map[which_map].at("roll") = min_angular_speed;
