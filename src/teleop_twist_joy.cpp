@@ -382,51 +382,6 @@ double getVal(const sensor_msgs::msg::Joy::SharedPtr joy_msg, const std::map<std
     return 0.0;
   }
 
-  if (joy_msg->buttons[linear_increase_button])
-  {
-    if (fieldname == "x" || fieldname == "y" || fieldname == "z")
-    {
-      scale_map.at(fieldname) = scale_map.at(fieldname) + 0.1;
-      if (scale_map.at(fieldname) > max_linear_speed)
-      {
-        scale_map.at(fieldname) = max_linear_speed;
-      }
-    }
-  }
-  if (joy_msg->buttons[linear_decrease_button])
-  {
-    if (fieldname == "x" || fieldname == "y" || fieldname == "z")
-    {
-      scale_map.at(fieldname) = scale_map.at(fieldname) - 0.1;
-      if (scale_map.at(fieldname) < min_linear_speed)
-      {
-        scale_map.at(fieldname) = min_linear_speed;
-      }
-    }
-  }
-  if (joy_msg->buttons[angular_increase_button])
-  {
-    if (fieldname == "yaw" || fieldname == "pitch" || fieldname == "roll")
-    {
-      scale_map.at(fieldname) = scale_map.at(fieldname) + 0.1;
-      if (scale_map.at(fieldname) > max_angular_speed)
-      {
-        scale_map.at(fieldname) = max_angular_speed;
-      }
-    }
-  }
-  if (joy_msg->buttons[angular_decrease_button])
-  {
-    if (fieldname == "yaw" || fieldname == "pitch" || fieldname == "roll")
-    {
-      scale_map.at(fieldname) = scale_map.at(fieldname) - 0.1;
-      if (scale_map.at(fieldname) < min_angular_speed)
-      {
-        scale_map.at(fieldname) = min_angular_speed;
-      }
-    }
-  }
-
 
   return joy_msg->axes[axis_map.at(fieldname)] * scale_map.at(fieldname);
 }
@@ -436,6 +391,79 @@ void TeleopTwistJoy::Impl::sendCmdVelMsg(const sensor_msgs::msg::Joy::SharedPtr 
 {
   // Initializes with zeros by default.
   auto cmd_vel_msg = std::make_unique<geometry_msgs::msg::Twist>();
+  if (joy_msg->buttons[linear_increase_button])
+  {
+    scale_linear_map[which_map].at("x") = scale_linear_map[which_map].at("x") + 0.1;
+    if (scale_linear_map[which_map].at("x") > max_linear_speed)
+    {
+      scale_linear_map[which_map].at("x") = max_linear_speed;
+    }
+    scale_linear_map[which_map].at("y") = scale_linear_map[which_map].at("y") + 0.1;
+    if (scale_linear_map[which_map].at("y") > max_linear_speed)
+    {
+      scale_linear_map[which_map].at("y") = max_linear_speed;
+    }
+    scale_linear_map[which_map].at("z") = scale_linear_map[which_map].at("z") + 0.1;
+    if (scale_linear_map[which_map].at("z") > max_linear_speed)
+    {
+      scale_linear_map[which_map].at("z") = max_linear_speed;
+    }
+  }
+  if (joy_msg->buttons[linear_decrease_button])
+  {
+    scale_linear_map[which_map].at("x") = scale_linear_map[which_map].at("x") - 0.1;
+    if (scale_linear_map[which_map].at("x") < min_linear_speed)
+    {
+      scale_linear_map[which_map].at("x") = min_linear_speed;
+    }
+    scale_linear_map[which_map].at("y") = scale_linear_map[which_map].at("y") - 0.1;
+    if (scale_linear_map[which_map].at("y") < min_linear_speed)
+    {
+      scale_linear_map[which_map].at("y") = min_linear_speed;
+    }
+    scale_linear_map[which_map].at("z") = scale_linear_map[which_map].at("z") - 0.1;
+    if (scale_linear_map[which_map].at("z") < min_linear_speed)
+    {
+      scale_linear_map[which_map].at("z") = min_linear_speed;
+    }
+  }
+  if (joy_msg->buttons[angular_increase_button])
+  {
+    scale_angular_map[which_map].at("yaw") = scale_angular_map[which_map].at("yaw") + 0.1;
+    if (scale_angular_map[which_map].at("yaw") > max_angular_speed)
+    {
+      scale_angular_map[which_map].at("yaw") = max_angular_speed;
+    }
+    scale_angular_map[which_map].at("pitch") = scale_angular_map[which_map].at("pitch") + 0.1;
+    if (scale_angular_map[which_map].at("pitch") > max_angular_speed)
+    {
+      scale_angular_map[which_map].at("pitch") = max_angular_speed;
+    }
+    scale_angular_map[which_map].at("roll") = scale_angular_map[which_map].at("roll") + 0.1;
+    if (scale_angular_map[which_map].at("roll") > max_angular_speed)
+    {
+      scale_angular_map[which_map].at("roll") = max_angular_speed;
+    }
+  }
+  if (joy_msg->buttons[angular_decrease_button])
+  {
+    scale_angular_map[which_map].at("yaw") = scale_angular_map[which_map].at("yaw") - 0.1;
+    if (scale_angular_map[which_map].at("yaw") < min_angular_speed)
+    {
+      scale_angular_map[which_map].at("yaw") = min_angular_speed;
+    }
+    scale_angular_map[which_map].at("pitch") = scale_angular_map[which_map].at("pitch") - 0.1;
+    if (scale_angular_map[which_map].at("pitch") < min_angular_speed)
+    {
+      scale_angular_map[which_map].at("pitch") = min_angular_speed;
+    }
+    scale_angular_map[which_map].at("roll") = scale_angular_map[which_map].at("roll") - 0.1;
+    if (scale_angular_map[which_map].at("roll") < min_angular_speed)
+    {
+      scale_angular_map[which_map].at("roll") = min_angular_speed;
+    }
+  }
+  
 
   cmd_vel_msg->linear.x = getVal(joy_msg, axis_linear_map, scale_linear_map[which_map], "x");
   cmd_vel_msg->linear.y = getVal(joy_msg, axis_linear_map, scale_linear_map[which_map], "y");
