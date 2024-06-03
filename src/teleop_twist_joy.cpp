@@ -384,7 +384,7 @@ double getVal(const sensor_msgs::msg::Joy::SharedPtr joy_msg, const std::map<std
 
   if (joy_msg->buttons[linear_increase_button])
   {
-    if (filedname == "x" || filedname == "y" || filedname == "z")
+    if (fieldname == "x" || fieldname == "y" || fieldname == "z")
     {
       scale_map.at(fieldname) = scale_map.at(fieldname) + 0.1;
       if (scale_map.at(fieldname) > max_linear_speed)
@@ -395,7 +395,7 @@ double getVal(const sensor_msgs::msg::Joy::SharedPtr joy_msg, const std::map<std
   }
   if (joy_msg->buttons[linear_decrease_button])
   {
-    if (filedname == "x" || filedname == "y" || filedname == "z")
+    if (fieldname == "x" || fieldname == "y" || fieldname == "z")
     {
       scale_map.at(fieldname) = scale_map.at(fieldname) - 0.1;
       if (scale_map.at(fieldname) < min_linear_speed)
@@ -406,7 +406,7 @@ double getVal(const sensor_msgs::msg::Joy::SharedPtr joy_msg, const std::map<std
   }
   if (joy_msg->buttons[angular_increase_button])
   {
-    if (filedname == "yaw" || filedname == "pitch" || filedname == "roll")
+    if (fieldname == "yaw" || fieldname == "pitch" || fieldname == "roll")
     {
       scale_map.at(fieldname) = scale_map.at(fieldname) + 0.1;
       if (scale_map.at(fieldname) > max_angular_speed)
@@ -417,7 +417,7 @@ double getVal(const sensor_msgs::msg::Joy::SharedPtr joy_msg, const std::map<std
   }
   if (joy_msg->buttons[angular_decrease_button])
   {
-    if (filedname == "yaw" || filedname == "pitch" || filedname == "roll")
+    if (fieldname == "yaw" || fieldname == "pitch" || fieldname == "roll")
     {
       scale_map.at(fieldname) = scale_map.at(fieldname) - 0.1;
       if (scale_map.at(fieldname) < min_angular_speed)
