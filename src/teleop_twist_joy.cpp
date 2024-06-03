@@ -102,6 +102,7 @@ TeleopTwistJoy::TeleopTwistJoy(const rclcpp::NodeOptions& options) : Node("teleo
   pimpl_->max_angular_speed = this->declare_parameter("min_angular_speed", 0.05);
 
 
+
   std::map<std::string, int64_t> default_linear_map{
     {"x", 5L},
     {"y", -1L},
@@ -155,7 +156,7 @@ TeleopTwistJoy::TeleopTwistJoy(const rclcpp::NodeOptions& options) : Node("teleo
   ROS_INFO_COND_NAMED(pimpl_->enable_turbo_button >= 0, "TeleopTwistJoy",
     "Turbo on button %" PRId64 ".", pimpl_->enable_turbo_button);
 
-  ROS_INFO_COND_NAMED(pimpl_->linear_increase_button >= 0, "TeleopTwistJoy",
+  ROS_INFO_COND_NAMED(pimpl_->linear_increase_button >= -1, "TeleopTwistJoy",
     "Linear increase on button %" PRId64 ".", pimpl_->linear_increase_button);
   ROS_INFO_COND_NAMED(pimpl_->linear_decrease_button >= 0, "TeleopTwistJoy",
     "Linear decrease on button %" PRId64 ".", pimpl_->linear_decrease_button);
