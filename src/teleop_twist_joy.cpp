@@ -385,7 +385,6 @@ double getVal(const sensor_msgs::msg::Joy::SharedPtr joy_msg, const std::map<std
     return 0.0;
   }
 
-  ROS_INFO_NAMED("TeleopTwistJoy", "Axis %s: %f, scale: %f", fieldname.c_str(), joy_msg->axes[axis_map.at(fieldname)], scale_map.at(fieldname));
   return joy_msg->axes[axis_map.at(fieldname)] * scale_map.at(fieldname);
 }
 
@@ -482,7 +481,6 @@ void TeleopTwistJoy::Impl::sendCmdVelMsg(const sensor_msgs::msg::Joy::SharedPtr 
   cmd_vel_msg->angular.z = getVal(joy_msg, axis_angular_map, scale_angular_map[which_map], "yaw");
   cmd_vel_msg->angular.y = getVal(joy_msg, axis_angular_map, scale_angular_map[which_map], "pitch");
   cmd_vel_msg->angular.x = getVal(joy_msg, axis_angular_map, scale_angular_map[which_map], "roll");
-  ROS_INFO_NAMED("TeleopTwistJoy", "Linear x: %f, y: %f, z: %f", cmd_vel_msg->linear.x, cmd_vel_msg->linear.y, cmd_vel_msg->linear.z);
 
   cmd_vel_pub->publish(std::move(cmd_vel_msg));
   sent_disable_msg = false;
