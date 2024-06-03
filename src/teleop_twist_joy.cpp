@@ -168,6 +168,9 @@ TeleopTwistJoy::TeleopTwistJoy(const rclcpp::NodeOptions& options) : Node("teleo
     "Angular increase on button %" PRId64 ".", pimpl_->angular_increase_button);
   ROS_INFO_COND_NAMED(pimpl_->angular_decrease_button >= 0, "TeleopTwistJoy",
     "Angular decrease on button %" PRId64 ".", pimpl_->angular_decrease_button);
+  ROS_INFO_NAMED("TeleopTwistJoy", "Max linear: %.2f, Min linear: %.2f, Max a: %.2f, Min a: %.2f.",
+    pimpl_->max_linear_speed, pimpl_->min_linear_speed, pimpl_->max_angular_speed, pimpl_->min_angular_speed);
+
 
   for (std::map<std::string, int64_t>::iterator it = pimpl_->axis_linear_map.begin();
        it != pimpl_->axis_linear_map.end(); ++it)
