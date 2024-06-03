@@ -59,6 +59,8 @@ struct TeleopTwistJoy::Impl
   bool require_enable_button;
   int64_t enable_button;
   int64_t enable_turbo_button;
+  int64_t linear_increase_button;
+  
 
   std::string cmd_vel_topic;
 
