@@ -63,6 +63,10 @@ struct TeleopTwistJoy::Impl
   int64_t linear_decrease_button;
   int64_t angular_increase_button;
   int64_t angular_decrease_button;
+  double max_linear_speed;
+  double min_linear_speed;
+  double max_angular_speed;
+  double min_angular_speed;
   
 
   std::string cmd_vel_topic;
@@ -156,7 +160,7 @@ TeleopTwistJoy::TeleopTwistJoy(const rclcpp::NodeOptions& options) : Node("teleo
   ROS_INFO_COND_NAMED(pimpl_->enable_turbo_button >= 0, "TeleopTwistJoy",
     "Turbo on button %" PRId64 ".", pimpl_->enable_turbo_button);
 
-  ROS_INFO_COND_NAMED(pimpl_->linear_increase_button >= -1, "TeleopTwistJoy",
+  ROS_INFO_COND_NAMED(pimpl_->linear_increase_button >= 0, "TeleopTwistJoy",
     "Linear increase on button %" PRId64 ".", pimpl_->linear_increase_button);
   ROS_INFO_COND_NAMED(pimpl_->linear_decrease_button >= 0, "TeleopTwistJoy",
     "Linear decrease on button %" PRId64 ".", pimpl_->linear_decrease_button);
