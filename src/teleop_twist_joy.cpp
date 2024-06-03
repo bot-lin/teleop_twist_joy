@@ -395,7 +395,7 @@ void TeleopTwistJoy::Impl::sendCmdVelMsg(const sensor_msgs::msg::Joy::SharedPtr 
   // Initializes with zeros by default.
   auto cmd_vel_msg = std::make_unique<geometry_msgs::msg::Twist>();
   if (joy_msg->buttons[linear_increase_button])
-  {
+  { 
     scale_linear_map[which_map].at("x") = scale_linear_map[which_map].at("x") + 0.05;
     if (scale_linear_map[which_map].at("x") > max_linear_speed)
     {
@@ -411,6 +411,8 @@ void TeleopTwistJoy::Impl::sendCmdVelMsg(const sensor_msgs::msg::Joy::SharedPtr 
     {
       scale_linear_map[which_map].at("z") = max_linear_speed;
     }
+    ROS_INFO_NAMED("TeleopTwistJoy", "Linear increase button pressed");
+    ROS_INFO_NAMED("TeleopTwistJoy", "Linear x: %f, y: %f, z: %f", scale_linear_map[which_map].at("x"), scale_linear_map[which_map].at("y"), scale_linear_map[which_map].at("z"));
   }
   if (joy_msg->buttons[linear_decrease_button])
   {
@@ -429,6 +431,8 @@ void TeleopTwistJoy::Impl::sendCmdVelMsg(const sensor_msgs::msg::Joy::SharedPtr 
     {
       scale_linear_map[which_map].at("z") = min_linear_speed;
     }
+    ROS_INFO_NAMED("TeleopTwistJoy", "Linear decrease button pressed");
+    ROS_INFO_NAMED("TeleopTwistJoy", "Linear x: %f, y: %f, z: %f", scale_linear_map[which_map].at("x"), scale_linear_map[which_map].at("y"), scale_linear_map[which_map].at("z"));
   }
   if (joy_msg->buttons[angular_increase_button])
   {
@@ -447,6 +451,8 @@ void TeleopTwistJoy::Impl::sendCmdVelMsg(const sensor_msgs::msg::Joy::SharedPtr 
     {
       scale_angular_map[which_map].at("roll") = max_angular_speed;
     }
+    ROS_INFO_NAMED("TeleopTwistJoy", "Angular increase button pressed");
+    ROS_INFO_NAMED("TeleopTwistJoy", "Angular yaw: %f, pitch: %f, roll: %f", scale_angular_map[which_map].at("yaw"), scale_angular_map[which_map].at("pitch"), scale_angular_map[which_map].at("roll"));
   }
   if (joy_msg->buttons[angular_decrease_button])
   {
@@ -465,6 +471,8 @@ void TeleopTwistJoy::Impl::sendCmdVelMsg(const sensor_msgs::msg::Joy::SharedPtr 
     {
       scale_angular_map[which_map].at("roll") = min_angular_speed;
     }
+    ROS_INFO_NAMED("TeleopTwistJoy", "Angular decrease button pressed");
+    ROS_INFO_NAMED("TeleopTwistJoy", "Angular yaw: %f, pitch: %f, roll: %f", scale_angular_map[which_map].at("yaw"), scale_angular_map[which_map].at("pitch"), scale_angular_map[which_map].at("roll"));
   }
   
 
