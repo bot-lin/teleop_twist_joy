@@ -516,15 +516,7 @@ void TeleopTwistJoy::Impl::sendCmdVelMsg(const sensor_msgs::msg::Joy::SharedPtr 
 
 void TeleopTwistJoy::Impl::joyCallback(const sensor_msgs::msg::Joy::SharedPtr joy_msg)
 { 
-  if (joy_msg->buttons[0] == 1){
 
-  }
-  //if all axes == 0, return
-  float sum = 0.0f;
-    for (float num : joy_msg->axes) {
-        sum += num;
-    }
-    if (sum == 0.0) return;
 
   
   if (enable_turbo_button >= 0 &&
