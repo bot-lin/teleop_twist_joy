@@ -78,6 +78,7 @@ struct TeleopTwistJoy::Impl
   double min_linear_speed;
   double max_angular_speed;
   double min_angular_speed;
+  TeleopTwistJoy* node_;
 
   std::string cmd_vel_topic;
 
@@ -109,6 +110,7 @@ struct TeleopTwistJoy::Impl
 TeleopTwistJoy::TeleopTwistJoy(const rclcpp::NodeOptions& options) : Node("teleop_twist_joy_node", options)
 {
   pimpl_ = new Impl;
+  pimpl_->node_ = this;  // Set the node pointer
   pimpl_->cmd_vel_topic = this->declare_parameter("cmd_vel_topic", "cmd_vel_nav");
   pimpl_->cmd_vel_pub = this->create_publisher<geometry_msgs::msg::Twist>(pimpl_->cmd_vel_topic, 10);
   pimpl_->joy_sub = this->create_subscription<sensor_msgs::msg::Joy>("joy", rclcpp::QoS(10),
@@ -557,7 +559,7 @@ void TeleopTwistJoy::Impl::sendCmdVelMsg(const sensor_msgs::msg::Joy::SharedPtr 
 void TeleopTwistJoy::Impl::joyCallback(const sensor_msgs::msg::Joy::SharedPtr joy_msg)
 {
   // Update the time of the last received joy message
-  last_joy_msg_time = rclcpp::Clock().now();
+  last_joy_msg_time = node_->get_clock()->now();
 
   if (enable_turbo_button >= 0 &&
       static_cast<int>(joy_msg->buttons.size()) > enable_turbo_button &&
@@ -588,7 +590,7 @@ void TeleopTwistJoy::Impl::joyCallback(const sensor_msgs::msg::Joy::SharedPtr jo
 // Implement the monitorJoyNode function
 void TeleopTwistJoy::Impl::monitorJoyNode()
 {
-  auto now = rclcpp::Clock().now();
+  auto now = node_->get_clock()->now();
   double time_since_last_msg = (now - last_joy_msg_time).seconds();
 
   if (time_since_last_msg > joy_timeout)
