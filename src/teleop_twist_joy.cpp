@@ -130,7 +130,7 @@ TeleopTwistJoy::TeleopTwistJoy(const rclcpp::NodeOptions& options) : Node("teleo
 
   // Initialize new member variables for monitoring and restarting joy_node
   pimpl_->joy_timeout = this->declare_parameter("joy_timeout", 5.0);  // Timeout in seconds
-  pimpl_->joy_node_cmd = this->declare_parameter("joy_node_cmd", "ros2 run joy joy_node");
+  pimpl_->joy_node_cmd = this->declare_parameter("joy_node_cmd", "ros2 run joy joy_node --ros-args -p dev:=/dev/logitech_f710 -p deadzone:=0.3 -p autorepeat_rate:=20.0");
   pimpl_->joy_node_pid = -1;
 
   // Start the joy_node process
