@@ -35,10 +35,21 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSI
 #include <rcutils/logging_macros.h>
 #include <sensor_msgs/msg/joy.hpp>
 
+// Include additional headers for process management
+#include <chrono>
+#include <thread>
+#include <cstdio>    // For popen, pclose
+#include <csignal>   // For kill
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
 #include "teleop_twist_joy/teleop_twist_joy.hpp"
 
 #define ROS_INFO_NAMED RCUTILS_LOG_INFO_NAMED
 #define ROS_INFO_COND_NAMED RCUTILS_LOG_INFO_EXPRESSION_NAMED
+
+using namespace std::chrono_literals;
 
 namespace teleop_twist_joy
 {
@@ -67,7 +78,6 @@ struct TeleopTwistJoy::Impl
   double min_linear_speed;
   double max_angular_speed;
   double min_angular_speed;
-  
 
   std::string cmd_vel_topic;
 
@@ -78,6 +88,19 @@ struct TeleopTwistJoy::Impl
   std::map<std::string, std::map<std::string, double>> scale_angular_map;
 
   bool sent_disable_msg;
+
+  // New member variables for monitoring and restarting joy_node
+  rclcpp::TimerBase::SharedPtr monitor_timer;
+  rclcpp::Time last_joy_msg_time;
+  double joy_timeout;  // In seconds
+  std::string joy_node_cmd;
+  pid_t joy_node_pid;
+
+  // New methods
+  void monitorJoyNode();
+  void restartJoyNode();
+  void startJoyNode();
+  void stopJoyNode();
 };
 
 /**
@@ -105,7 +128,22 @@ TeleopTwistJoy::TeleopTwistJoy(const rclcpp::NodeOptions& options) : Node("teleo
   pimpl_->max_angular_speed = this->declare_parameter("max_angular_speed", 0.5);
   pimpl_->min_angular_speed = this->declare_parameter("min_angular_speed", 0.05);
 
+  // Initialize new member variables for monitoring and restarting joy_node
+  pimpl_->joy_timeout = this->declare_parameter("joy_timeout", 5.0);  // Timeout in seconds
+  pimpl_->joy_node_cmd = this->declare_parameter("joy_node_cmd", "ros2 run joy joy_node");
+  pimpl_->joy_node_pid = -1;
 
+  // Start the joy_node process
+  pimpl_->startJoyNode();
+
+  // Create a timer to monitor the /joy topic
+  pimpl_->monitor_timer = this->create_wall_timer(
+    1000ms,  // Check every 1 second
+    std::bind(&Impl::monitorJoyNode, pimpl_)
+  );
+
+  // Initialize last_joy_msg_time to current time
+  pimpl_->last_joy_msg_time = this->now();
 
   std::map<std::string, int64_t> default_linear_map{
     {"x", 5L},
@@ -174,9 +212,8 @@ TeleopTwistJoy::TeleopTwistJoy(const rclcpp::NodeOptions& options) : Node("teleo
     "Angular increase on button %" PRId64 ".", pimpl_->angular_increase_button);
   ROS_INFO_COND_NAMED(pimpl_->angular_decrease_button >= 0, "TeleopTwistJoy",
     "Angular decrease on button %" PRId64 ".", pimpl_->angular_decrease_button);
-  ROS_INFO_NAMED("TeleopTwistJoy", "Max linear: %.2f, Min linear: %.2f, Max a: %.2f, Min a: %.2f.",
+  ROS_INFO_NAMED("TeleopTwistJoy", "Max linear: %.2f, Min linear: %.2f, Max angular: %.2f, Min angular: %.2f.",
     pimpl_->max_linear_speed, pimpl_->min_linear_speed, pimpl_->max_angular_speed, pimpl_->min_angular_speed);
-
 
   for (std::map<std::string, int64_t>::iterator it = pimpl_->axis_linear_map.begin();
        it != pimpl_->axis_linear_map.end(); ++it)
@@ -223,7 +260,7 @@ TeleopTwistJoy::TeleopTwistJoy(const rclcpp::NodeOptions& options) : Node("teleo
         {
           result.reason = "Only integer values can be set for '" + parameter.get_name() + "'.";
           RCLCPP_WARN(this->get_logger(), result.reason.c_str());
-          result.successful = false; 
+          result.successful = false;
           return result;
         }
       }
@@ -377,6 +414,8 @@ TeleopTwistJoy::TeleopTwistJoy(const rclcpp::NodeOptions& options) : Node("teleo
 
 TeleopTwistJoy::~TeleopTwistJoy()
 {
+  // Stop the joy_node process when this node is destroyed
+  pimpl_->stopJoyNode();
   delete pimpl_;
 }
 
@@ -400,7 +439,7 @@ void TeleopTwistJoy::Impl::sendCmdVelMsg(const sensor_msgs::msg::Joy::SharedPtr 
   // Initializes with zeros by default.
   auto cmd_vel_msg = std::make_unique<geometry_msgs::msg::Twist>();
   if (joy_msg->buttons[linear_increase_button])
-  { 
+  {
     scale_linear_map[which_map].at("x") = scale_linear_map[which_map].at("x") + 0.05;
     if (scale_linear_map[which_map].at("x") > max_linear_speed)
     {
@@ -499,7 +538,7 @@ void TeleopTwistJoy::Impl::sendCmdVelMsg(const sensor_msgs::msg::Joy::SharedPtr 
     ROS_INFO_NAMED("TeleopTwistJoy", "Angular decrease button pressed");
     ROS_INFO_NAMED("TeleopTwistJoy", "Angular yaw: %f, pitch: %f, roll: %f", scale_angular_map[which_map].at("yaw"), scale_angular_map[which_map].at("pitch"), scale_angular_map[which_map].at("roll"));
   }
-  
+
   double v = getVal(joy_msg, axis_linear_map, scale_linear_map[which_map], "x");
   if (v != 0.0) cmd_vel_msg->linear.x = v;
   else cmd_vel_msg->linear.x = getVal(joy_msg, axis_linear_map, scale_linear_map[which_map], "x2");
@@ -510,16 +549,16 @@ void TeleopTwistJoy::Impl::sendCmdVelMsg(const sensor_msgs::msg::Joy::SharedPtr 
   else cmd_vel_msg->angular.z = getVal(joy_msg, axis_angular_map, scale_angular_map[which_map], "yaw2");
   cmd_vel_msg->angular.y = getVal(joy_msg, axis_angular_map, scale_angular_map[which_map], "pitch");
   cmd_vel_msg->angular.x = getVal(joy_msg, axis_angular_map, scale_angular_map[which_map], "roll");
-  
+
   cmd_vel_pub->publish(std::move(cmd_vel_msg));
   sent_disable_msg = false;
 }
 
 void TeleopTwistJoy::Impl::joyCallback(const sensor_msgs::msg::Joy::SharedPtr joy_msg)
-{ 
+{
+  // Update the time of the last received joy message
+  last_joy_msg_time = rclcpp::Clock().now();
 
-
-  
   if (enable_turbo_button >= 0 &&
       static_cast<int>(joy_msg->buttons.size()) > enable_turbo_button &&
       joy_msg->buttons[enable_turbo_button])
@@ -527,7 +566,7 @@ void TeleopTwistJoy::Impl::joyCallback(const sensor_msgs::msg::Joy::SharedPtr jo
     sendCmdVelMsg(joy_msg, "turbo");
   }
   else if (!require_enable_button ||
-	   (static_cast<int>(joy_msg->buttons.size()) > enable_button &&
+       (static_cast<int>(joy_msg->buttons.size()) > enable_button &&
            joy_msg->buttons[enable_button]))
   {
     sendCmdVelMsg(joy_msg, "normal");
@@ -544,6 +583,101 @@ void TeleopTwistJoy::Impl::joyCallback(const sensor_msgs::msg::Joy::SharedPtr jo
       sent_disable_msg = true;
     }
   }
+}
+
+// Implement the monitorJoyNode function
+void TeleopTwistJoy::Impl::monitorJoyNode()
+{
+  auto now = rclcpp::Clock().now();
+  double time_since_last_msg = (now - last_joy_msg_time).seconds();
+
+  if (time_since_last_msg > joy_timeout)
+  {
+    RCLCPP_ERROR(rclcpp::get_logger("TeleopTwistJoy"),
+                 "No /joy messages received in the last %.1f seconds. Restarting joy_node...", time_since_last_msg);
+
+    // Restart the joy_node process
+    restartJoyNode();
+
+    // Reset the last_joy_msg_time to now
+    last_joy_msg_time = now;
+  }
+}
+
+// Implement the startJoyNode function
+void TeleopTwistJoy::Impl::startJoyNode()
+{
+  if (joy_node_pid != -1)
+  {
+    RCLCPP_WARN(rclcpp::get_logger("TeleopTwistJoy"), "joy_node is already running with PID %d", joy_node_pid);
+    return;
+  }
+
+  RCLCPP_INFO(rclcpp::get_logger("TeleopTwistJoy"), "Starting joy_node with command: %s", joy_node_cmd.c_str());
+
+  // Fork a new process
+  joy_node_pid = fork();
+
+  if (joy_node_pid == 0)
+  {
+    // Child process: Execute the joy_node command
+    execl("/bin/sh", "sh", "-c", joy_node_cmd.c_str(), (char *)nullptr);
+    // If execl returns, there was an error
+    perror("execl");
+    exit(1);
+  }
+  else if (joy_node_pid > 0)
+  {
+    // Parent process
+    RCLCPP_INFO(rclcpp::get_logger("TeleopTwistJoy"), "joy_node started with PID %d", joy_node_pid);
+  }
+  else
+  {
+    // Fork failed
+    RCLCPP_ERROR(rclcpp::get_logger("TeleopTwistJoy"), "Failed to start joy_node");
+    joy_node_pid = -1;
+  }
+}
+
+// Implement the stopJoyNode function
+void TeleopTwistJoy::Impl::stopJoyNode()
+{
+  if (joy_node_pid == -1)
+  {
+    RCLCPP_WARN(rclcpp::get_logger("TeleopTwistJoy"), "joy_node is not running");
+    return;
+  }
+
+  RCLCPP_INFO(rclcpp::get_logger("TeleopTwistJoy"), "Stopping joy_node with PID %d", joy_node_pid);
+
+  // Send SIGTERM to the joy_node process
+  if (kill(joy_node_pid, SIGTERM) == 0)
+  {
+    // Wait for the process to terminate
+    int status;
+    waitpid(joy_node_pid, &status, 0);
+    RCLCPP_INFO(rclcpp::get_logger("TeleopTwistJoy"), "joy_node stopped");
+  }
+  else
+  {
+    perror("kill");
+    RCLCPP_ERROR(rclcpp::get_logger("TeleopTwistJoy"), "Failed to stop joy_node");
+  }
+
+  joy_node_pid = -1;
+}
+
+// Implement the restartJoyNode function
+void TeleopTwistJoy::Impl::restartJoyNode()
+{
+  // Stop the joy_node if it's running
+  stopJoyNode();
+
+  // Small delay before restarting
+  std::this_thread::sleep_for(std::chrono::seconds(1));
+
+  // Start the joy_node again
+  startJoyNode();
 }
 
 }  // namespace teleop_twist_joy
