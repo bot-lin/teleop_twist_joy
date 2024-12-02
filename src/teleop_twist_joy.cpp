@@ -42,6 +42,8 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSI
 #include <csignal>   // For kill
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <signal.h>    // For killpg()
+#include <errno.h>     // For errno
 #include <unistd.h>
 
 #include "teleop_twist_joy/teleop_twist_joy.hpp"
@@ -606,7 +608,6 @@ void TeleopTwistJoy::Impl::monitorJoyNode()
   }
 }
 
-// Implement the startJoyNode function
 void TeleopTwistJoy::Impl::startJoyNode()
 {
   if (joy_node_pid != -1)
@@ -617,20 +618,38 @@ void TeleopTwistJoy::Impl::startJoyNode()
 
   RCLCPP_INFO(rclcpp::get_logger("TeleopTwistJoy"), "Starting joy_node with command: %s", joy_node_cmd.c_str());
 
+  // Parse the command into an argument vector
+  std::vector<char*> args;
+  std::istringstream iss(joy_node_cmd);
+  std::string token;
+  while (iss >> token)
+  {
+    char* arg = new char[token.size() + 1];
+    std::strcpy(arg, token.c_str());
+    args.push_back(arg);
+  }
+  args.push_back(nullptr);  // execvp requires a nullptr-terminated array
+
   // Fork a new process
   joy_node_pid = fork();
 
   if (joy_node_pid == 0)
   {
-    // Child process: Execute the joy_node command
-    execl("/bin/sh", "sh", "-c", joy_node_cmd.c_str(), (char *)nullptr);
-    // If execl returns, there was an error
-    perror("execl");
+    // Child process: Set up a new process group
+    setpgid(0, 0);  // Set the process group ID to the child's PID
+
+    // Execute the joy_node command
+    execvp(args[0], args.data());
+
+    // If execvp returns, there was an error
+    perror("execvp");
     exit(1);
   }
   else if (joy_node_pid > 0)
   {
-    // Parent process
+    // Parent process: Set the process group ID for the child process
+    setpgid(joy_node_pid, joy_node_pid);
+
     RCLCPP_INFO(rclcpp::get_logger("TeleopTwistJoy"), "joy_node started with PID %d", joy_node_pid);
   }
   else
@@ -639,9 +658,14 @@ void TeleopTwistJoy::Impl::startJoyNode()
     RCLCPP_ERROR(rclcpp::get_logger("TeleopTwistJoy"), "Failed to start joy_node");
     joy_node_pid = -1;
   }
+
+  // Clean up allocated arguments in the parent process
+  for (size_t i = 0; i < args.size(); ++i)
+  {
+    delete[] args[i];
+  }
 }
 
-// Implement the stopJoyNode function
 void TeleopTwistJoy::Impl::stopJoyNode()
 {
   if (joy_node_pid == -1)
@@ -652,17 +676,22 @@ void TeleopTwistJoy::Impl::stopJoyNode()
 
   RCLCPP_INFO(rclcpp::get_logger("TeleopTwistJoy"), "Stopping joy_node with PID %d", joy_node_pid);
 
-  // Send SIGTERM to the joy_node process
-  if (kill(joy_node_pid, SIGTERM) == 0)
+  // Send SIGTERM to the process group
+  if (killpg(joy_node_pid, SIGTERM) == 0)
   {
-    // Wait for the process to terminate
+    // Wait for all processes in the group to terminate
     int status;
-    waitpid(joy_node_pid, &status, 0);
+    pid_t pid;
+    do
+    {
+      pid = waitpid(-joy_node_pid, &status, WUNTRACED | WNOHANG);
+    } while (pid != -1 || (pid == -1 && errno == EINTR));
+
     RCLCPP_INFO(rclcpp::get_logger("TeleopTwistJoy"), "joy_node stopped");
   }
   else
   {
-    perror("kill");
+    perror("killpg");
     RCLCPP_ERROR(rclcpp::get_logger("TeleopTwistJoy"), "Failed to stop joy_node");
   }
 
