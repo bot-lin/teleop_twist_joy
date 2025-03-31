@@ -92,18 +92,7 @@ struct TeleopTwistJoy::Impl
 
   bool sent_disable_msg;
 
-  // New member variables for monitoring and restarting joy_node
-  rclcpp::TimerBase::SharedPtr monitor_timer;
-  rclcpp::Time last_joy_msg_time;
-  double joy_timeout;  // In seconds
-  std::string joy_node_cmd;
-  pid_t joy_node_pid;
 
-  // New methods
-  void monitorJoyNode();
-  void restartJoyNode();
-  void startJoyNode();
-  void stopJoyNode();
 };
 
 /**
@@ -132,22 +121,6 @@ TeleopTwistJoy::TeleopTwistJoy(const rclcpp::NodeOptions& options) : Node("teleo
   pimpl_->max_angular_speed = this->declare_parameter("max_angular_speed", 0.5);
   pimpl_->min_angular_speed = this->declare_parameter("min_angular_speed", 0.05);
 
-  // Initialize new member variables for monitoring and restarting joy_node
-  pimpl_->joy_timeout = this->declare_parameter("joy_timeout", 5.0);  // Timeout in seconds
-  pimpl_->joy_node_cmd = this->declare_parameter("joy_node_cmd", "ros2 run joy joy_node --ros-args -p dev:=/dev/logitech_f710 -p deadzone:=0.3 -p autorepeat_rate:=20.0");
-  pimpl_->joy_node_pid = -1;
-
-  // Start the joy_node process
-  pimpl_->startJoyNode();
-
-  // Create a timer to monitor the /joy topic
-  pimpl_->monitor_timer = this->create_wall_timer(
-    1000ms,  // Check every 1 second
-    std::bind(&Impl::monitorJoyNode, pimpl_)
-  );
-
-  // Initialize last_joy_msg_time to current time
-  pimpl_->last_joy_msg_time = this->now();
 
   std::map<std::string, int64_t> default_linear_map{
     {"x", 5L},
@@ -589,127 +562,8 @@ void TeleopTwistJoy::Impl::joyCallback(const sensor_msgs::msg::Joy::SharedPtr jo
   }
 }
 
-// Implement the monitorJoyNode function
-void TeleopTwistJoy::Impl::monitorJoyNode()
-{
-  auto now = node_->get_clock()->now();
-  double time_since_last_msg = (now - last_joy_msg_time).seconds();
 
-  if (time_since_last_msg > joy_timeout)
-  {
-    RCLCPP_ERROR(rclcpp::get_logger("TeleopTwistJoy"),
-                 "No /joy messages received in the last %.1f seconds. Restarting joy_node...", time_since_last_msg);
 
-    // Restart the joy_node process
-    restartJoyNode();
-
-    // Reset the last_joy_msg_time to now
-    last_joy_msg_time = now;
-  }
-}
-
-void TeleopTwistJoy::Impl::startJoyNode()
-{
-  if (joy_node_pid != -1)
-  {
-    RCLCPP_WARN(rclcpp::get_logger("TeleopTwistJoy"), "joy_node is already running with PID %d", joy_node_pid);
-    return;
-  }
-
-  RCLCPP_INFO(rclcpp::get_logger("TeleopTwistJoy"), "Starting joy_node with command: %s", joy_node_cmd.c_str());
-
-  // Parse the command into an argument vector
-  std::vector<char*> args;
-  std::istringstream iss(joy_node_cmd);
-  std::string token;
-  while (iss >> token)
-  {
-    char* arg = new char[token.size() + 1];
-    std::strcpy(arg, token.c_str());
-    args.push_back(arg);
-  }
-  args.push_back(nullptr);  // execvp requires a nullptr-terminated array
-
-  // Fork a new process
-  joy_node_pid = fork();
-
-  if (joy_node_pid == 0)
-  {
-    // Child process: Set up a new process group
-    setpgid(0, 0);  // Set the process group ID to the child's PID
-
-    // Execute the joy_node command
-    execvp(args[0], args.data());
-
-    // If execvp returns, there was an error
-    perror("execvp");
-    exit(1);
-  }
-  else if (joy_node_pid > 0)
-  {
-    // Parent process: Set the process group ID for the child process
-    setpgid(joy_node_pid, joy_node_pid);
-
-    RCLCPP_INFO(rclcpp::get_logger("TeleopTwistJoy"), "joy_node started with PID %d", joy_node_pid);
-  }
-  else
-  {
-    // Fork failed
-    RCLCPP_ERROR(rclcpp::get_logger("TeleopTwistJoy"), "Failed to start joy_node");
-    joy_node_pid = -1;
-  }
-
-  // Clean up allocated arguments in the parent process
-  for (size_t i = 0; i < args.size(); ++i)
-  {
-    delete[] args[i];
-  }
-}
-
-void TeleopTwistJoy::Impl::stopJoyNode()
-{
-  if (joy_node_pid == -1)
-  {
-    RCLCPP_WARN(rclcpp::get_logger("TeleopTwistJoy"), "joy_node is not running");
-    return;
-  }
-
-  RCLCPP_INFO(rclcpp::get_logger("TeleopTwistJoy"), "Stopping joy_node with PID %d", joy_node_pid);
-
-  // Send SIGTERM to the process group
-  if (killpg(joy_node_pid, SIGTERM) == 0)
-  {
-    // Wait for all processes in the group to terminate
-    int status;
-    pid_t pid;
-    do
-    {
-      pid = waitpid(-joy_node_pid, &status, WUNTRACED | WNOHANG);
-    } while (pid != -1 || (pid == -1 && errno == EINTR));
-
-    RCLCPP_INFO(rclcpp::get_logger("TeleopTwistJoy"), "joy_node stopped");
-  }
-  else
-  {
-    perror("killpg");
-    RCLCPP_ERROR(rclcpp::get_logger("TeleopTwistJoy"), "Failed to stop joy_node");
-  }
-
-  joy_node_pid = -1;
-}
-
-// Implement the restartJoyNode function
-void TeleopTwistJoy::Impl::restartJoyNode()
-{
-  // Stop the joy_node if it's running
-  stopJoyNode();
-
-  // Small delay before restarting
-  std::this_thread::sleep_for(std::chrono::seconds(1));
-
-  // Start the joy_node again
-  startJoyNode();
-}
 
 }  // namespace teleop_twist_joy
 
