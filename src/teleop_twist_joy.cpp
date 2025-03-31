@@ -391,8 +391,6 @@ TeleopTwistJoy::TeleopTwistJoy(const rclcpp::NodeOptions& options) : Node("teleo
 
 TeleopTwistJoy::~TeleopTwistJoy()
 {
-  // Stop the joy_node process when this node is destroyed
-  pimpl_->stopJoyNode();
   delete pimpl_;
 }
 
@@ -533,8 +531,6 @@ void TeleopTwistJoy::Impl::sendCmdVelMsg(const sensor_msgs::msg::Joy::SharedPtr 
 
 void TeleopTwistJoy::Impl::joyCallback(const sensor_msgs::msg::Joy::SharedPtr joy_msg)
 {
-  // Update the time of the last received joy message
-  last_joy_msg_time = node_->get_clock()->now();
 
   if (enable_turbo_button >= 0 &&
       static_cast<int>(joy_msg->buttons.size()) > enable_turbo_button &&
