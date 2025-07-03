@@ -4,12 +4,20 @@ from ament_index_python.packages import get_package_share_directory
 
 import launch
 import launch_ros.actions
+from launch.actions import IncludeLaunchDescription
+from launch.launch_description_sources import PythonLaunchDescriptionSource
+
 
 
 def generate_launch_description():
     joy_config = launch.substitutions.LaunchConfiguration('joy_config')
     joy_dev = launch.substitutions.LaunchConfiguration('joy_dev')
     config_filepath = launch.substitutions.LaunchConfiguration('config_filepath')
+    joy_node = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([os.path.join(
+            get_package_share_directory('zc_joystick'), 'launch'),
+            '/start.launch.py'])
+    )
 
     return launch.LaunchDescription([
         launch.actions.DeclareLaunchArgument('joy_vel', default_value='cmd_vel'),
@@ -20,9 +28,7 @@ def generate_launch_description():
                 get_package_share_directory('teleop_twist_joy'), 'config', '')),
             joy_config, launch.substitutions.TextSubstitution(text='.config.yaml')]),
 
-        launch_ros.actions.Node(
-            package='zc_joystick', executable='zc_joystick_node.py', name='joy_node',
-        ),
+        joy_node,
         launch_ros.actions.Node(
             package='teleop_twist_joy', executable='teleop_node',
             name='teleop_twist_joy_node', parameters=[config_filepath],
